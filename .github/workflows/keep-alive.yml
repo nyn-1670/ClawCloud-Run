@@ -1,15 +1,18 @@
 name: ClawCloud 自动登录保活
 
 on:
-  workflow_dispatch:    # ← 必须有这行
+  workflow_dispatch:
   schedule:
-    - cron: '0 7 */5 * *'  # UTC 7:00，每5天运行
-    
+    - cron: '0 4 * * 1'  # UTC 7:00，每5天运行
+
+permissions:
+  contents: write
+
 jobs:
   auto-login:
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    
+
     steps:
       - name: 检出代码
         uses: actions/checkout@v4
@@ -33,5 +36,15 @@ jobs:
           TG_BOT_TOKEN: ${{ secrets.TG_BOT_TOKEN }}
           TG_CHAT_ID: ${{ secrets.TG_CHAT_ID }}
           REPO_TOKEN: ${{ secrets.REPO_TOKEN }}
-          
         run: python scripts/auto_login.py
+
+      - name: 保持仓库活跃
+        run: |
+          git config user.email "action@github.com"
+          git config user.name "GitHub Action"
+          echo "last run: $(date)" > last_run.txt
+          git add last_run.txt
+          git commit -m "chore: keep alive $(date +%Y-%m-%d)" || echo "nothing to commit"
+          git push
+        env:
+          GITHUB_TOKEN: ${{ secrets.REPO_TOKEN }}
